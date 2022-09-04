@@ -48,12 +48,12 @@ fn input_to_usize(prompt: &str) -> usize {
 
 impl Game {
     fn new(p: Player) {
-        let g = Game {
+        let game = Game {
             board: [[None; 3]; 3],
             current_player: p,
         };
 
-        g.place();
+        game.place();
     }
 
     fn place(mut self) {
@@ -88,29 +88,87 @@ impl Game {
         self.check_win();
     }
 
+    fn check_matches(&self, y: usize, x: usize, dy: isize, dx: usize) -> bool {
+        const NEEDED: usize = 3;
+
+        let player = self.board[y][x];
+
+        if player == None {
+            return false;
+        }
+
+        (1..NEEDED).fold(true, |won, i| {
+            // TODO: can I fix this?
+            if self.board[((y as isize) + (dy * (i as isize))) as usize][x + dx * i] != player {
+                false
+            } else {
+                won
+            }
+        })
+    }
+
     fn check_win(mut self) {
-        // TODO: victory logic
-        for row in &self.board {
-            for cell in row {
+        const NEEDED: usize = 3;
+
+        let mut won = false;
+
+        for (y, row) in self.board.into_iter().enumerate() {
+            for (x, cell) in row.into_iter().enumerate() {
+                if cell != Some(self.current_player) {
+                    break;
+                }
+
                 // match horizontal
-                // skip if last two cols
+                // TODO: move overflow checks into check_matches()
+                if x <= row.len() - NEEDED {
+                    if self.check_matches(y, x, 0, 1) {
+                        won = true;
+                        break;
+                    }
+                }
+
                 // match vertical
-                // skip if last two rows
-                // match diagonal up
-                // skip if first two rows or last two cols
+                if y <= self.board.len() - NEEDED {
+                    if self.check_matches(y, x, 1, 0) {
+                        won = true;
+                        break;
+                    }
+                }
+
                 // match diagonal down
-                // skip if last two rows or last two cols
+                if x <= row.len() - NEEDED && y <= self.board.len() - NEEDED {
+                    if self.check_matches(y, x, 1, 1) {
+                        won = true;
+                        break;
+                    }
+                }
+
+                // match diagonal up
+                if x <= row.len() - NEEDED && y >= NEEDED {
+                    if self.check_matches(y, x, -1, 1) {
+                        won = true;
+                        break;
+                    }
+                }
             }
         }
 
         // if X won, O starts
+
+        if won {
+            println!("{} won!", self.current_player);
+        }
 
         self.current_player = match self.current_player {
             Player::O => Player::X,
             _ => Player::O,
         };
 
-        self.place();
+        if won {
+            Game::new(self.current_player);
+        } else {
+            self.place();
+        }
     }
 }
 
