@@ -89,79 +89,59 @@ impl Game {
     }
 
     fn check_matches(&self, y: usize, x: usize, dy: isize, dx: usize) -> bool {
-        const NEEDED: usize = 3;
-
         let player = self.board[y][x];
 
+        // TODO: or do this check in check_win()?
         if player == None {
             return false;
         }
 
-        (1..NEEDED).fold(true, |won, i| {
-            // TODO: can I fix this?
-            if self.board[((y as isize) + (dy * (i as isize))) as usize][x + dx * i] != player {
-                false
-            } else {
-                won
-            }
-        })
+        const NEEDED: usize = 3;
+
+        // TODO: do without type conversions?
+        let max_y = y as isize + ((NEEDED as isize - 1) * dy);
+        let max_x = x + (NEEDED - 1) * dx;
+
+        // prevent out of bounds
+        if max_y >= NEEDED as isize || max_y < 0 || max_x >= NEEDED {
+            return false;
+        }
+
+        (1..NEEDED).find(|&i| {
+            self.board[((y as isize) + (dy * (i as isize))) as usize][x + dx * i] != player
+        }) == None
     }
 
     fn check_win(mut self) {
-        const NEEDED: usize = 3;
-
         let mut won = false;
 
         for (y, row) in self.board.into_iter().enumerate() {
-            for (x, cell) in row.into_iter().enumerate() {
-                if cell != Some(self.current_player) {
-                    break;
-                }
-
-                // match horizontal
-                // TODO: move overflow checks into check_matches()
-                if x <= row.len() - NEEDED {
-                    if self.check_matches(y, x, 0, 1) {
-                        won = true;
-                        break;
-                    }
-                }
-
-                // match vertical
-                if y <= self.board.len() - NEEDED {
-                    if self.check_matches(y, x, 1, 0) {
-                        won = true;
-                        break;
-                    }
-                }
-
-                // match diagonal down
-                if x <= row.len() - NEEDED && y <= self.board.len() - NEEDED {
-                    if self.check_matches(y, x, 1, 1) {
-                        won = true;
-                        break;
-                    }
-                }
-
-                // match diagonal up
-                if x <= row.len() - NEEDED && y >= NEEDED {
-                    if self.check_matches(y, x, -1, 1) {
-                        won = true;
-                        break;
-                    }
-                }
+            for (x, _) in row.into_iter().enumerate() {
+                won = [
+                    // horizontal
+                    self.check_matches(y, x, 0, 1),
+                    // vertical
+                    self.check_matches(y, x, 1, 0),
+                    // diagonal down
+                    self.check_matches(y, x, 1, 1),
+                    // diagonal up
+                    self.check_matches(y, x, -1, 1),
+                ]
+                .into_iter()
+                .find(|&x| x == true)
+                    != None;
             }
         }
-
-        // if X won, O starts
 
         if won {
             println!("{} won!", self.current_player);
         }
 
-        self.current_player = match self.current_player {
-            Player::O => Player::X,
-            _ => Player::O,
+        // if X won, O starts
+        self.current_player = if self.current_player == Player::O {
+            Player::X
+        } else {
+            Player::O
         };
 
         if won {
