@@ -1,7 +1,7 @@
 use std::fmt;
 use std::io;
 
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 pub enum Player {
     X,
     O,
@@ -15,8 +15,10 @@ impl fmt::Display for Player {
     }
 }
 
+type Row = [Option<Player>; 3];
+
 pub struct Game {
-    pub board: [[Option<Player>; 3]; 3],
+    pub board: [Row; 3],
     pub current_player: Player,
 }
 
@@ -61,15 +63,9 @@ impl Game {
             println!("{}", self);
 
             let y = input_to_usize("Row:");
-
-            if self.board.get(y) == None {
-                println!("Out of bounds.");
-                continue;
-            }
-
             let x = input_to_usize("Column:");
 
-            match self.board[y].get(x) {
+            match self.board.get(y).and_then(|row| row.get(x)) {
                 None => {
                     println!("Out of bounds.");
                     continue;
@@ -115,8 +111,8 @@ impl Game {
     fn check_win(mut self) {
         let mut won = false;
 
-        for (y, row) in self.board.into_iter().enumerate() {
-            for (x, _) in row.into_iter().enumerate() {
+        for (y, row) in self.board.iter().enumerate() {
+            for (x, _) in row.iter().enumerate() {
                 won = [
                     // horizontal
                     self.check_matches(y, x, 0, 1),
@@ -127,8 +123,8 @@ impl Game {
                     // diagonal up
                     self.check_matches(y, x, -1, 1),
                 ]
-                .into_iter()
-                .find(|&x| x == true)
+                .iter()
+                .find(|&&x| x)
                     != None;
             }
         }
@@ -162,9 +158,9 @@ impl fmt::Display for Game {
                 };
                 write!(f, "[{}]", symbol)?;
             }
-            write!(f, "\n")?;
+            writeln!(f)?;
         }
-        write!(f, "It's {}'s turn.\n", &self.current_player.to_string())?;
+        writeln!(f, "It's {}'s turn.", &self.current_player.to_string())?;
 
         Ok(())
     }
